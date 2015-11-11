@@ -1,5 +1,5 @@
 module CollisionDetection
 
-# package code goes here
+include("octree.jl")
 
 end # module
