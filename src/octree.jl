@@ -74,7 +74,7 @@ function childsector(point, center)
 		end
 	end
 
-	return sct+1 # because Julia has 1-based indexing
+	return sct # because Julia has 1-based indexing
 end
 
 isleaf(node) = isempty(node.children)
@@ -83,7 +83,7 @@ function fitsinbox(pos, radius, center, halfsize)
 
 	for i in 1:length(pos)
 		(pos[i] - radius < center[i] - halfsize) && return false
-		(pos[i] + radius < center[i] + halfsize) && return false
+		(pos[i] + radius > center[i] + halfsize) && return false
 	end
 
 	return true
@@ -96,14 +96,14 @@ Computes the center and halfsize of the child of the input box
 that resides in octant `sector`
 """
 function childcentersize(center, halfsize, sector)
-    chd_center = deepcopy(3)
-	chd_halfsize =halfsize / 2
+    chd_center = deepcopy(center)
+    chd_halfsize =halfsize / 2
 
-	for i in 1 : length(center)
-		chd_center[i] += (sector & (1 << (i-1))) == 0 ? -chd_halfsize : +chd_halfsize
-	end
+    for i in 1 : length(center)
+        chd_center[i] += (sector & (1 << (i-1))) == 0 ? -chd_halfsize : +chd_halfsize
+    end
 
-	return chd_center, chd_halfsize
+    return chd_center, chd_halfsize
 end
 
 """
@@ -141,11 +141,13 @@ function insert!(tree, box, center, halfsize, point, radius, id)
     elseif saturated && internal && !fat
 
         sct = childsector(point, center)
-        chdbox = box.children[sct]
-        chdcenter, chdhalfsize = childcentersize!(center, halfsize, sct)
+        chdbox = box.children[sct+1]
+        chdcenter, chdhalfsize = childcentersize(center, halfsize, sct)
         insert!(tree, chdbox, chdcenter, chdhalfsize, point, radius, id)
 
     else # saturated && not internal
+
+        println("Scenario: subdivide!")
 
         # insert the new element in this box for now
         push!(box.data, id)
@@ -180,16 +182,18 @@ function insert!(tree, box, center, halfsize, point, radius, id)
         unmovables = Int[]
         for id in box.data
 
-            point = tree.points[id]
+            point = tree.points[:,id]
             radius = tree.radii[id]
 
             sct = childsector(point, center)
-            chdbox = box.children[sct]
-            chdcenter, chdhalfsize = childcentersize!(center, halfsize, sct)
+            chdbox = box.children[sct+1]
+            chdcenter, chdhalfsize = childcentersize(center, halfsize, sct)
             if fitsinbox(point, radius, chdcenter, chdhalfsize)
                 push!(chdbox.data, id)
+                println("move ", id, " down")
             else
                 push!(unmovables, id)
+                println("keep ", id, " here")
             end
 
         end
@@ -199,7 +203,3 @@ function insert!(tree, box, center, halfsize, point, radius, id)
     end
 
 end
-
-
-
-
