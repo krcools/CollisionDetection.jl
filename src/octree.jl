@@ -1,16 +1,24 @@
-type Octree
+type Octree{T}
     center
     halfsize
     rootbox
 
     points
-    radii
+    radii::Array{T,1}
 
     splitcount
     minhalfsize
 end
 
-function Octree(points, radii, splitcount = 10, minhalfsize = zero(eltype(points)))
+type Box
+    data
+    children
+end
+
+Box() = Box(Int[], Box[])
+
+
+function Octree{T}(points, radii::Array{T,1}, splitcount = 10, minhalfsize = zero(eltype(points)))
 
     n_points = size(points, 2)
     n_dims = size(points, 1)
@@ -21,11 +29,8 @@ function Octree(points, radii, splitcount = 10, minhalfsize = zero(eltype(points
     ll = fill(minimum(points), n_dims) - radius
     ur = fill(maximum(points), n_dims) + radius
 
-    @show ll, ur
-
     center = (ll + ur) / 2
     halfsize = ur[1] - center[1]
-    @show center
 
     # if the minimal box size is not specified,
     # make a reasonable guess
@@ -51,12 +56,6 @@ function Octree(points, radii, splitcount = 10, minhalfsize = zero(eltype(points
 end
 
 
-type Box
-    data
-    children
-end
-
-Box() = Box(Int[], Box[])
 
 """
     childsector(point, center) -> sector
@@ -106,6 +105,23 @@ function childcentersize(center, halfsize, sector)
     return chd_center, chd_halfsize
 end
 
+# """
+# parentcentersize(center, halfsize, sector) -> center, halfsize
+#
+# Given the center and halfsize of a box we know is in sector `sector` of
+# its parent box, computes the center and halfsize of the parent box.
+# """
+# function parentcentersize(center, halfsize, sector)
+#     par_center = deepcopy(center)
+#     par_halfsize =halfsize * 2
+#
+#     for i in 1 : length(center)
+#         par_center[i] += (sector & (1 << (i-1))) == 0 ? +halfsize : -halfsize
+#     end
+#
+#     return par_center, par_halfsize
+# end
+
 """
 insert!(tree, box, center, halfsize, point, radius, id)
 
@@ -147,7 +163,7 @@ function insert!(tree, box, center, halfsize, point, radius, id)
 
     else # saturated && not internal
 
-        println("Scenario: subdivide!")
+        # if their was a previous attempt to subdivide this box,
 
         # insert the new element in this box for now
         push!(box.data, id)
@@ -166,18 +182,12 @@ function insert!(tree, box, center, halfsize, point, radius, id)
         end
 
 
-        #attempt to subdivde:
-        # for point in points in this box
-        #   for chbox in childboxes
-        #     if fitsinbox(point, radius, center, halfsize)
-        #       insert point in chdbox
-        #       break
-        #     else
-        #       add to the list of fat points
-        #     end
-        #     if saturation relieved, break
-        #   end
-        # end
+        # subdivide:
+        # for every id in this box
+        #   find the correspdoning child sector
+        #   if it fits in the child box, insert
+        #   if not, add to the list of unmovables
+        # replace the current box data with the list of unmovables
 
         unmovables = Int[]
         for id in box.data
@@ -190,10 +200,8 @@ function insert!(tree, box, center, halfsize, point, radius, id)
             chdcenter, chdhalfsize = childcentersize(center, halfsize, sct)
             if fitsinbox(point, radius, chdcenter, chdhalfsize)
                 push!(chdbox.data, id)
-                println("move ", id, " down")
             else
                 push!(unmovables, id)
-                println("keep ", id, " here")
             end
 
         end
@@ -201,5 +209,169 @@ function insert!(tree, box, center, halfsize, point, radius, id)
         box.data = unmovables
 
     end
+
+end
+
+import Base.length
+function length(tree::Octree)
+
+    # Traversal order:
+    #   data in the box
+    #   data in all children
+    #   data in the sibilings
+    level = 0
+
+    box = tree.rootbox
+    sz = length(box.data)
+
+    box_stack = [tree.rootbox]
+    sct_stack = [1]
+
+    sz = -0
+
+    box = tree.rootbox
+    sct = 0
+
+    box_stack = Box[]
+    sct_stack = Int[]
+
+    while true
+
+        # if this is the first time the box is visited, count the data
+        if sct == 0
+            sz += length(box.data)
+            println("Adding ", length(box.data), " contributions at level: ", level)
+        end
+
+        # if this box has unprocessed children
+        # push this box on the stack and process the children
+        if sct < length(box.children)
+            push!(box_stack, box)
+            push!(sct_stack, sct+1)
+            level += 1
+
+            box = box.children[sct+1]
+            sct = 0
+
+            continue
+        end
+
+        # if box and its children are processed,
+        # and their is no parent above this box:
+        # end the traversal:
+        if isempty(box_stack)
+            break
+        end
+
+        # if either no children or all children processed:
+        # move up one level
+        box = pop!(box_stack)
+        sct = pop!(sct_stack)
+        level -= 1
+
+    end
+
+    return sz
+
+end
+
+
+type BoxIterator{T}
+    predicate::Function
+    tree::Octree{T}
+end
+
+type BoxIteratorStage
+    box
+    sct
+    center
+    halfsize
+end
+
+boxes(tree::Octree, pred = (ctr,hsz)->true) = BoxIterator(pred, tree)
+
+import Base: start, next, done
+
+function start(bi::BoxIterator)
+
+    pred     = bi.predicate
+    center   = bi.tree.center
+    halfsize = bi.tree.halfsize
+
+    state = [ BoxIteratorStage(
+        bi.tree.rootbox, 0, center, halfsize
+    ) ]
+
+    # If the rootbox does not satisfy the predicate,
+    # fast forward to the next eligible box
+    # take care of this deeply annoying corner case:
+    if !pred(center, halfsize)
+        box, state = next(bi, state)
+    end
+
+    return state
+
+end
+
+function next(bi::BoxIterator, state)
+
+    item = last(state).box
+
+    box = last(state).box   # current box
+    sct = last(state).sct   # next child to visit
+    hsz = last(state).halfsize
+    ctr = last(state).center
+
+    while true
+
+        # scan for a next child box that meets the criterium
+        childbox_found = false
+        while sct < length(box.children)
+            if bi.predicate(ctr, hsz)
+                childbox_found = true
+                break
+            end
+            sct += 1
+        end
+
+        if childbox_found
+
+            # if this box has unvisited children, increment
+            # the next child sct counter and move down the tree
+            last(state).sct = sct + 1
+            ctr, hsz = childcentersize(ctr, hsz, sct)
+            stage = BoxIteratorStage(box.children[sct+1], 0, ctr, hsz)
+            push!(state, stage)
+
+        else
+
+            pop!(state)
+
+        end
+
+        # if we popped the root, we're finished
+        if isempty(state)
+            break
+        end
+
+        box = last(state).box
+        sct = last(state).sct
+        hsz = last(state).halfsize
+        ctr = last(state).center
+
+        # only stop the iteration when a new box is found
+        # (sct == 0) implies that this is the first visit
+        if sct == 0
+            break
+        end
+
+    end
+
+    return item, state
+end
+
+function done(bi::BoxIterator, state)
+
+    isempty(state)
 
 end
