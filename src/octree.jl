@@ -26,11 +26,11 @@ function Octree{T}(points, radii::Array{T,1}, splitcount = 10, minhalfsize = zer
     # compute the bounding box taking into account
     # the radius of the objects to be inserted
     radius =  maximum(radii)
-    ll = fill(minimum(points), n_dims) - radius
-    ur = fill(maximum(points), n_dims) + radius
+    ll = minimum(points, 2) - radius
+    ur = maximum(points, 2) + radius
 
     center = (ll + ur) / 2
-    halfsize = ur[1] - center[1]
+    halfsize = maximum(ur - center)
 
     # if the minimal box size is not specified,
     # make a reasonable guess
@@ -240,7 +240,9 @@ function length(tree::Octree)
         # if this is the first time the box is visited, count the data
         if sct == 0
             sz += length(box.data)
-            println("Adding ", length(box.data), " contributions at level: ", level)
+            if length(box.data) != 0
+                println("Adding ", length(box.data), " contributions at level: ", level)
+            end
         end
 
         # if this box has unprocessed children
@@ -327,7 +329,8 @@ function next(bi::BoxIterator, state)
         # scan for a next child box that meets the criterium
         childbox_found = false
         while sct < length(box.children)
-            if bi.predicate(ctr, hsz)
+            chd_ctr, chd_hsz = childcentersize(ctr, hsz, sct)
+            if bi.predicate(chd_ctr, chd_hsz)
                 childbox_found = true
                 break
             end
@@ -360,11 +363,20 @@ function next(bi::BoxIterator, state)
         ctr = last(state).center
 
         # only stop the iteration when a new box is found
+        # and if that box is non-empty
         # (sct == 0) implies that this is the first visit
-        if sct == 0
+        if sct == 0 && !isempty(box.data)
             break
         end
 
+    end
+
+    if length(state) > 1
+        println("valid box found at level: ", length(state), " in sector ", state[end-1].sct-1, ", containing ", length(item.data))
+    elseif length(state) > 0
+        println("Valid box found at root level, containing ", length(item.data))
+    else
+        println("iteration completed.")
     end
 
     return item, state
