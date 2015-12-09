@@ -1,3 +1,7 @@
+using FixedSizeArrays
+
+export Octree, boxes
+
 type Octree{T}
     center
     halfsize
@@ -17,17 +21,17 @@ end
 
 Box() = Box(Int[], Box[])
 
+function Octree{U,T}(points::Array{Point{U,T},1}, radii::Array{T,1}, splitcount = 10,
+    minhalfsize = zero(T))
 
-function Octree{T}(points, radii::Array{T,1}, splitcount = 10, minhalfsize = zero(eltype(points)))
-
-    n_points = size(points, 2)
-    n_dims = size(points, 1)
+    n_points = length(points)
+    n_dims = U
 
     # compute the bounding box taking into account
     # the radius of the objects to be inserted
     radius =  maximum(radii)
-    ll = minimum(points, 2) - radius
-    ur = maximum(points, 2) + radius
+    ll = minimum(points) - radius
+    ur = maximum(points) + radius
 
     center = (ll + ur) / 2
     halfsize = maximum(ur - center)
@@ -46,7 +50,7 @@ function Octree{T}(points, radii::Array{T,1}, splitcount = 10, minhalfsize = zer
     # populate
     for id in 1:n_points
 
-        point, radius = points[:,id], radii[id]
+        point, radius = points[id], radii[id]
         insert!(tree, tree.rootbox, center, halfsize, point, radius, id)
 
     end
@@ -94,15 +98,30 @@ shiftcenter!(center, halfsize, sector) -> center, halfsize
 Computes the center and halfsize of the child of the input box
 that resides in octant `sector`
 """
-function childcentersize(center, halfsize, sector)
-    chd_center = deepcopy(center)
-    chd_halfsize =halfsize / 2
+function childcentersize{U,T}(center::Point{U,T}, halfsize::T, sector::Int)
+    # chd_center = deepcopy(center)
+    # chd_halfsize =halfsize / 2
+    #
+    # for i in 1 : length(center)
+    #     chd_center[i] += (sector & (1 << (i-1))) == 0 ? -chd_halfsize : +chd_halfsize
+    # end
+    #
+    # return chd_center, chd_halfsize
+    throw(ErrorException("generated function not yet implemented"))
+end
 
-    for i in 1 : length(center)
-        chd_center[i] += (sector & (1 << (i-1))) == 0 ? -chd_halfsize : +chd_halfsize
-    end
 
-    return chd_center, chd_halfsize
+function childcentersize{T}(center::Point{3,T}, halfsize::T, sector::Int)
+
+    chd_hs = halfsize / 2
+    chd_ct = Point(
+        center[1] + (sector & (1 <<(0)) == 0 ? -chd_hs : +chd_hs),
+        center[2] + (sector & (1 <<(1)) == 0 ? -chd_hs : +chd_hs),
+        center[3] + (sector & (1 <<(2)) == 0 ? -chd_hs : +chd_hs),
+    )
+
+    return chd_ct, chd_hs
+
 end
 
 # """
@@ -133,7 +152,8 @@ point:    the point at which to insert
 radius:   the radius of the item to insert
 id:       a unique id that identifies the inserted item uniquely
 """
-function insert!(tree, box, center, halfsize, point, radius, id)
+function insert!{U,T}(tree, box, center::Point{U,T},
+    halfsize::T, point::Point{U,T}, radius::T, id::Int)
 
     # if not saturated: insert here
     # if saturated and not internal : create children and redistribute
@@ -192,7 +212,7 @@ function insert!(tree, box, center, halfsize, point, radius, id)
         unmovables = Int[]
         for id in box.data
 
-            point = tree.points[:,id]
+            point = tree.points[id]
             radius = tree.radii[id]
 
             sct = childsector(point, center)
@@ -369,14 +389,6 @@ function next(bi::BoxIterator, state)
             break
         end
 
-    end
-
-    if length(state) > 1
-        println("valid box found at level: ", length(state), " in sector ", state[end-1].sct-1, ", containing ", length(item.data))
-    elseif length(state) > 0
-        println("Valid box found at root level, containing ", length(item.data))
-    else
-        println("iteration completed.")
     end
 
     return item, state
