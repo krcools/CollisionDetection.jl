@@ -1,6 +1,7 @@
 using FixedSizeArrays
 
 export Octree, boxes
+export boudingbox, boxesoverlap
 
 type Octree{T}
     center
@@ -20,6 +21,44 @@ type Box
 end
 
 Box() = Box(Int[], Box[])
+
+"""
+Compute the bounding cube for a Array of Point. The return values
+are the center of the bounding box and the half size of the cube.
+"""
+function boundingbox{N,T}(v::Array{Point{N,T},1})
+
+  ll = minimum(v)
+  ur = maximum(v)
+
+  c = (ll + ur)/2
+  s = maximum(ur - c)
+
+  return c, s
+end
+
+
+"""
+Predicate used for iteration over an Octree. Returns true if two boxes
+specified by their centers and halfsizes overlap. More carefull investigation
+of the objects within is required to assess collision.
+
+    function boxesoverlap(c1, hs1, c2, hs2)
+"""
+function boxesoverlap(c1, hs1, c2, hs2)
+
+    dim = length(c1)
+    @assert dim == length(c2)
+
+    hs = hs1 + hs2
+    for i in 1 : dim
+        if abs(c1[i] - c2[i]) < hs
+            return true
+        end
+    end
+
+    return false
+end
 
 function Octree{U,T}(points::Array{Point{U,T},1}, radii::Array{T,1}, splitcount = 10,
     minhalfsize = zero(T))
