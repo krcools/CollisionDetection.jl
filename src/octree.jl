@@ -1,6 +1,6 @@
 using FixedSizeArrays
 
-export Octree, boxes
+export Octree, boxes, octree
 export boudingbox, boxesoverlap
 
 type Octree{T}
@@ -96,6 +96,13 @@ function Octree{U,T}(points::Array{Point{U,T},1}, radii::Array{T,1}, splitcount 
 
     return tree
 
+end
+
+function octree(points)
+  PT = eltype(points)
+  T = eltype(PT)
+  @show T
+  Octree(points, zeros(T, length(points)))
 end
 
 
@@ -436,5 +443,22 @@ end
 function done(bi::BoxIterator, state)
 
     isempty(state)
+
+end
+
+import Base.find
+function find(tr::Octree, v; tol = sqrt(eps(eltype(v))))
+
+    pred = (c,s) -> fitsinbox(v, 0.0, c, s)
+    I = Int[]
+    for b in boxes(tr, pred)
+      for i in b.data
+        if norm(tr.points[i] - v) < tol
+          push!(I, i)
+        end
+      end
+    end
+
+    return I
 
 end
