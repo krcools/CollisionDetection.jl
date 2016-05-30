@@ -1,6 +1,6 @@
 using FixedSizeArrays
 
-export Octree, boxes, octree
+export Octree, boxes, fitsinbox, octree
 export boudingbox, boxesoverlap
 
 type Octree{T}
