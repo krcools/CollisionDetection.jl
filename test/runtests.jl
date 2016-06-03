@@ -1,7 +1,7 @@
 module MyPkgTests
 
 using Base.Test
-using ImmutableArrays
+#using ImmutableArrays
 
 import CollisionDetection
 
