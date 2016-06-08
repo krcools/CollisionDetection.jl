@@ -1,32 +1,36 @@
-using FixedSizeArrays
-
-export Octree, boxes, fitsinbox, octree
-export boudingbox, boxesoverlap
-
-type Octree{T}
-    center
-    halfsize
-    rootbox
-
-    points
-    radii::Array{T,1}
-
-    splitcount
-    minhalfsize
-end
+export Octree
+export boxes, fitsinbox, boudingbox, boxesoverlap
 
 type Box
-    data
-    children
+    data::Vector{Int}
+    children::Vector{Box}
 end
 
 Box() = Box(Int[], Box[])
 
 """
+T: type of the coordinates
+P: type of the points stored in the Octree
+"""
+type Octree{T,P}
+    center::P
+    halfsize::T
+    rootbox::Box
+
+    points::Vector{P}
+    radii::Vector{T}
+
+    splitcount::Int
+    minhalfsize::T
+end
+
+"""
+  boundingbox(v)
+
 Compute the bounding cube for a Array of Point. The return values
 are the center of the bounding box and the half size of the cube.
 """
-function boundingbox{N,T}(v::Array{Point{N,T},1})
+function boundingbox{P}(v::Vector{P})
 
   ll = minimum(v)
   ur = maximum(v)
@@ -43,7 +47,7 @@ Predicate used for iteration over an Octree. Returns true if two boxes
 specified by their centers and halfsizes overlap. More carefull investigation
 of the objects within is required to assess collision.
 
-    function boxesoverlap(c1, hs1, c2, hs2)
+    boxesoverlap(c1, hs1, c2, hs2)
 """
 function boxesoverlap(c1, hs1, c2, hs2)
 
@@ -60,11 +64,10 @@ function boxesoverlap(c1, hs1, c2, hs2)
     return false
 end
 
-function Octree{U,T}(points::Array{Point{U,T},1}, radii::Array{T,1}, splitcount = 10,
-    minhalfsize = zero(T))
+function Octree{T}(points::Vector, radii::Vector{T}, splitcount = 10,  minhalfsize = zero(T))
 
     n_points = length(points)
-    n_dims = U
+    n_dims = length(eltype(points))
 
     # compute the bounding box taking into account
     # the radius of the objects to be inserted
@@ -98,12 +101,13 @@ function Octree{U,T}(points::Array{Point{U,T},1}, radii::Array{T,1}, splitcount 
 
 end
 
-function octree(points)
-  PT = eltype(points)
-  T = eltype(PT)
-  @show T
-  Octree(points, zeros(T, length(points)))
-end
+"""
+  Octree(points)
+
+Insert zero radius objects at positions `points` in an Octree
+"""
+
+Octree(points) = Octree(points, zeros(eltype(eltype(points)), length(points)))
 
 
 
@@ -138,54 +142,32 @@ function fitsinbox(pos, radius, center, halfsize)
 	return true
 end
 
+
+
+export childcentersize
+
 """
-shiftcenter!(center, halfsize, sector) -> center, halfsize
+  childcentersize(center, halfsize, sector) -> center, halfsize
 
 Computes the center and halfsize of the child of the input box
 that resides in octant `sector`
 """
-function childcentersize{U,T}(center::Point{U,T}, halfsize::T, sector::Int)
-    # chd_center = deepcopy(center)
-    # chd_halfsize =halfsize / 2
-    #
-    # for i in 1 : length(center)
-    #     chd_center[i] += (sector & (1 << (i-1))) == 0 ? -chd_halfsize : +chd_halfsize
-    # end
-    #
-    # return chd_center, chd_halfsize
-    throw(ErrorException("generated function not yet implemented"))
+@generated function childcentersize(center, halfsize, sector)
+  D = length(center)
+  xp1 = :(halfsize = halfsize / 2)
+  xp2 = Expr(:call, center)
+  for d in 1:D
+    push!(xp2.args, :(center[$d] + (sector & (1 << $(d-1)) == 0 ? -halfsize : +halfsize)))
+  end
+  xp = quote
+    $xp1
+    return $xp2, halfsize
+  end
+  #@show xp
+  #xp
 end
 
 
-function childcentersize{T}(center::Point{3,T}, halfsize::T, sector::Int)
-
-    chd_hs = halfsize / 2
-    chd_ct = Point(
-        center[1] + (sector & (1 <<(0)) == 0 ? -chd_hs : +chd_hs),
-        center[2] + (sector & (1 <<(1)) == 0 ? -chd_hs : +chd_hs),
-        center[3] + (sector & (1 <<(2)) == 0 ? -chd_hs : +chd_hs),
-    )
-
-    return chd_ct, chd_hs
-
-end
-
-# """
-# parentcentersize(center, halfsize, sector) -> center, halfsize
-#
-# Given the center and halfsize of a box we know is in sector `sector` of
-# its parent box, computes the center and halfsize of the parent box.
-# """
-# function parentcentersize(center, halfsize, sector)
-#     par_center = deepcopy(center)
-#     par_halfsize =halfsize * 2
-#
-#     for i in 1 : length(center)
-#         par_center[i] += (sector & (1 << (i-1))) == 0 ? +halfsize : -halfsize
-#     end
-#
-#     return par_center, par_halfsize
-# end
 
 """
 insert!(tree, box, center, halfsize, point, radius, id)
@@ -198,8 +180,7 @@ point:    the point at which to insert
 radius:   the radius of the item to insert
 id:       a unique id that identifies the inserted item uniquely
 """
-function insert!{U,T}(tree, box, center::Point{U,T},
-    halfsize::T, point::Point{U,T}, radius::T, id::Int)
+function insert!{P,T}(tree, box, center::P, halfsize::T, point::P, radius::T, id)
 
     # if not saturated: insert here
     # if saturated and not internal : create children and redistribute
@@ -211,6 +192,9 @@ function insert!{U,T}(tree, box, center::Point{U,T},
     # sat & not internal: create children and redistibute
     # sat & internal & not fat: insert in childbox
     # all other cases: insert here
+
+    dim = length(P)
+    nch = 2^dim
 
     saturated = (length(box.data) + 1) > tree.splitcount
     fat       = !fitsinbox(point, radius, center, halfsize)
@@ -242,8 +226,8 @@ function insert!{U,T}(tree, box, center::Point{U,T},
         end
 
         # Create an array of childboxes
-        box.children = Array(Box,8) #TODO: generalise the 8 to 2^k
-        for i in 1:8
+        box.children = Array(Box,nch)
+        for i in 1:nch
             box.children[i] = Box(Int[], Box[])
         end
 
@@ -344,22 +328,21 @@ function length(tree::Octree)
 end
 
 
-type BoxIterator{T}
-    predicate::Function
-    tree::Octree{T}
+type BoxIterator{T,P,F}
+    predicate::F
+    tree::Octree{T,P}
 end
 
-type BoxIteratorStage
-    box
-    sct
-    center
-    halfsize
+type BoxIteratorStage{T,P}
+    box::Box
+    sct::Int
+    center::P
+    halfsize::T
 end
 
 boxes(tree::Octree, pred = (ctr,hsz)->true) = BoxIterator(pred, tree)
 
 import Base: start, next, done
-
 function start(bi::BoxIterator)
 
     pred     = bi.predicate
@@ -440,11 +423,7 @@ function next(bi::BoxIterator, state)
     return item, state
 end
 
-function done(bi::BoxIterator, state)
-
-    isempty(state)
-
-end
+done(bi::BoxIterator, state) = isempty(state)
 
 import Base.find
 function find(tr::Octree, v; tol = sqrt(eps(eltype(v))))
