@@ -47,7 +47,7 @@ end
 
 
 """
-Predicate1 used for iteration over an Octree. Returns true if two boxes
+Predicate used for iteration over an Octree. Returns true if two boxes
 specified by their centers and halfsizes overlap. More carefull investigation
 of the objects within is required to assess collision.>>
 
