@@ -31,7 +31,7 @@ Compute the bounding cube/square for a Array of Point. The return values
 are the center of the bounding box and the half size of the cube.
 """
 function boundingbox{P}(v::Vector{P})
-  #P are points 2values (x,y) in 2D or (x,y,z) in 3D
+  #P are points values (x,y) in 2D or (x,y,z) in 3D
   ll = minimum(v)
   ur = maximum(v)
 ##ll => LowerLeft
