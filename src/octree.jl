@@ -31,7 +31,7 @@ Compute the bounding cube/square for a Array of Point. The return values
 are the center of the bounding box and the half size of the cube.
 """
 function boundingbox{P}(v::Vector{P})
-  #P in case of 2D are points and from julia they store 2values (x,y)
+  #P are points 2values (x,y) in 2D or (x,y,z) in 3D
   ll = minimum(v)
   ur = maximum(v)
 ##ll => LowerLeft
@@ -49,7 +49,7 @@ end
 """
 Predicate used for iteration over an Octree. Returns true if two boxes
 specified by their centers and halfsizes overlap. More carefull investigation
-of the objects within is required to assess collision.>>
+of the objects within is required to assess collision.
 
     boxesoverlap(c1, hs1, c2, hs2)
 """
