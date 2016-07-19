@@ -34,14 +34,13 @@ function boundingbox{P}(v::Vector{P})
   #P are points values (x,y) in 2D or (x,y,z) in 3D
   ll = minimum(v)
   ur = maximum(v)
-##ll => LowerLeft
-##up => UpperRight
+  #ll => LowerLeft
+  #up => UpperRight
   c = (ll + ur)/2
   s = maximum(ur - c)
-##c => centre
-##s => biggest half width, i.e in 2D distance between points result in a rectangular
-###    (so we pick the bigger value here to form a rectangular later)
-#Note: this calculation, I am not sure it holds for points with negative values
+  #c => centre
+  #s => biggest half width, i.e in 2D distance between points result in a rectangular
+  #    (so we pick the bigger value here to form a rectangular later)
   return c, s
 end
 
@@ -54,18 +53,18 @@ of the objects within is required to assess collision.
     boxesoverlap(c1, hs1, c2, hs2)
 """
 function boxesoverlap(c1, hs1, c2, hs2)
-# Checking the type of the problem domain 2D or 3D? and making sure the boxes are from same domain
+    # Checking the type of the problem domain 2D or 3D? and making sure the boxes are from same domain
     dim = length(c1)
     @assert dim == length(c2)
-#Note: this test fails at least for 2D, word file explains..
+    #Note: this test fails at least for 2D, word file explains..
     hs = hs1 + hs2
     for i in 1 : dim
-        if abs(c1[i] - c2[i]) < hs
-            return true
+        if abs(c1[i] - c2[i]) >= hs
+            return false
         end
     end
 
-    return false
+    return true
 end
 
 function Octree{T}(points::Vector, radii::Vector{T}, splitcount = 10,  minhalfsize = zero(T))
