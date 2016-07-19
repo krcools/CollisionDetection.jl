@@ -27,17 +27,20 @@ end
 """
   boundingbox(v)
 
-Compute the bounding cube for a Array of Point. The return values
+Compute the bounding cube/square for a Array of Point. The return values
 are the center of the bounding box and the half size of the cube.
 """
 function boundingbox{P}(v::Vector{P})
-
+  #P are points values (x,y) in 2D or (x,y,z) in 3D
   ll = minimum(v)
   ur = maximum(v)
-
+  #ll => LowerLeft
+  #up => UpperRight
   c = (ll + ur)/2
   s = maximum(ur - c)
-
+  #c => centre
+  #s => biggest half width, i.e in 2D distance between points result in a rectangular
+  #    (so we pick the bigger value here to form a rectangular later)
   return c, s
 end
 
@@ -50,18 +53,18 @@ of the objects within is required to assess collision.
     boxesoverlap(c1, hs1, c2, hs2)
 """
 function boxesoverlap(c1, hs1, c2, hs2)
-
+    # Checking the type of the problem domain 2D or 3D? and making sure the boxes are from same domain
     dim = length(c1)
     @assert dim == length(c2)
-
+    #Note: I have fixed the condition, now it works for 3D and 2D
     hs = hs1 + hs2
     for i in 1 : dim
-        if abs(c1[i] - c2[i]) < hs
-            return true
+        if abs(c1[i] - c2[i]) >= hs
+            return false
         end
     end
 
-    return false
+    return true
 end
 
 function Octree{T}(points::Vector, radii::Vector{T}, splitcount = 10,  minhalfsize = zero(T))
