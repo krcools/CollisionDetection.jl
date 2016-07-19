@@ -56,7 +56,7 @@ function boxesoverlap(c1, hs1, c2, hs2)
     # Checking the type of the problem domain 2D or 3D? and making sure the boxes are from same domain
     dim = length(c1)
     @assert dim == length(c2)
-    #Note: this test fails at least for 2D, word file explains..
+    #Note: I have fixed the condition, now it works for 3D and 2D
     hs = hs1 + hs2
     for i in 1 : dim
         if abs(c1[i] - c2[i]) >= hs
