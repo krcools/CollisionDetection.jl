@@ -121,7 +121,9 @@ Computes the sector w.r.t. `center` that contains  point. Sector is an Int
 that encodes the position of point along each axis in its bit representation
 """
 function childsector(point, center)
-
+  # in Case of 3D the Octant they are numbered as follows (+,+,+)->7, (+,+,-)->3, (+,-,+)->5, (+,-,-)->1
+  #(-,+,+)->6, (-,+,-)->2, (-,-,+)->4, (-,-,-)->0
+  #For 2D (-,-)->0, (-,+)->1, (+,-)->2, (+,+)->3
 	sct = 0
 	r = point - center
 	for (i,x) in enumerate(r)
@@ -135,13 +137,20 @@ end
 
 isleaf(node) = isempty(node.children)
 
+
+"""
+    fitsinbox(pos, radius, center, halfsize) -> true/fasle
+
+Finds out if the object with position (pos) and (raduis) fits inside the box.
+It uses the box dimension (centre, and halfsize(w/2)) to do the comparsion
+"""
 function fitsinbox(pos, radius, center, halfsize)
 
 	for i in 1:length(pos)
 		(pos[i] - radius < center[i] - halfsize) && return false
 		(pos[i] + radius > center[i] + halfsize) && return false
 	end
-
+# the code judege by comapring with the box lower left point and uper right point
 	return true
 end
 
@@ -195,7 +204,7 @@ function insert!{P,T}(tree, box, center::P, halfsize::T, point::P, radius::T, id
     # sat & not internal: create children and redistibute
     # sat & internal & not fat: insert in childbox
     # all other cases: insert here
-
+    # Will find out first if we are solveing octree or quadtree 3D/2D
     dim = length(P)
     nch = 2^dim
 
