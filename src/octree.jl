@@ -153,6 +153,24 @@ function fitsinbox(pos, radius, center, halfsize)
 # the code judege by comapring with the box lower left point and uper right point
 	return true
 end
+"""
+  itsinbox(Opj_c, Obj_rad, box_c, box_hf, ratio) -> true/fasle
+
+  Finds out if the object with center position (Opj_c) and (Obj_rad) fits inside the box.
+  It uses the box dimension (box_c, and box_hf(w/2)) to do the comparsion
+  ratio is relative to box half width, so if you want to be just within the box
+  then ratio =1, if the boundaries of the object is slightly bigger and you still
+  want to include them make ratio bigger ex:1.2
+"""
+function fitsinbox(Opj_c, Obj_rad, box_c, box_hf, ratio)
+  for i in 1:length(Opj_c)
+		(Opj_c[i] - Obj_rad < box_c[i] - (box_hf*ratio)) && return false
+		(Opj_c[i] + Obj_rad > box_c[i] + (box_hf*ratio)) && return false
+	end
+# the code judege by comapring with the box lower left point and uper right point
+	return true
+
+end
 
 
 
@@ -209,7 +227,8 @@ function insert!{P,T}(tree, box, center::P, halfsize::T, point::P, radius::T, id
     nch = 2^dim
 
     saturated = (length(box.data) + 1) > tree.splitcount
-    fat       = !fitsinbox(point, radius, center, halfsize)
+    #fat       = !fitsinbox(point, radius, center, halfsize) # the old one will leave it here incase needed to go back
+    fat       = !fitsinbox(point, radius, center, halfsize,1.2)# will include fat objects within 1.2halfsize of the box
     internal  = !isleaf(box)
 
     if !saturated || (saturated && internal && fat)
@@ -260,7 +279,7 @@ function insert!{P,T}(tree, box, center::P, halfsize::T, point::P, radius::T, id
             sct = childsector(point, center)
             chdbox = box.children[sct+1]
             chdcenter, chdhalfsize = childcentersize(center, halfsize, sct)
-            if fitsinbox(point, radius, chdcenter, chdhalfsize)
+            if fitsinbox(point, radius, chdcenter, chdhalfsize,1.2)# I am changing this at the moment to the new version
                 push!(chdbox.data, id)
             else
                 push!(unmovables, id)
@@ -440,7 +459,7 @@ done(bi::BoxIterator, state) = isempty(state)
 import Base.find
 function find(tr::Octree, v; tol = sqrt(eps(eltype(v))))
 
-    pred = (c,s) -> fitsinbox(v, 0.0, c, s)
+    pred = (c,s) -> fitsinbox(v, 0.0, c, s)# i didn't change it because find will get the point anyway, it only chck for its existance
     I = Int[]
     for b in boxes(tr, pred)
       for i in b.data

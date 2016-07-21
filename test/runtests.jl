@@ -6,5 +6,6 @@ using Base.Test
 import CollisionDetection
 
 include("core.jl")
+include("core2.jl")
 
 end # module
