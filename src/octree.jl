@@ -19,6 +19,7 @@ type Octree{T,P}
 
     points::Vector{P}
     radii::Vector{T}
+    #expanding_ratio::Float64 # This will add the expanding ratio of boxes in case we needed it will work on it later
 
     splitcount::Int
     minhalfsize::T
@@ -121,7 +122,9 @@ Computes the sector w.r.t. `center` that contains  point. Sector is an Int
 that encodes the position of point along each axis in its bit representation
 """
 function childsector(point, center)
-
+  # in Case of 3D the Octant they are numbered as follows (+,+,+)->7, (+,+,-)->3, (+,-,+)->5, (+,-,-)->1
+  #(-,+,+)->6, (-,+,-)->2, (-,-,+)->4, (-,-,-)->0
+  #For 2D (-,-)->0, (-,+)->1, (+,-)->2, (+,+)->3
 	sct = 0
 	r = point - center
 	for (i,x) in enumerate(r)
@@ -135,14 +138,39 @@ end
 
 isleaf(node) = isempty(node.children)
 
+
+"""
+    fitsinbox(pos, radius, center, halfsize) -> true/fasle
+
+Finds out if the object with position (pos) and (raduis) fits inside the box.
+It uses the box dimension (centre, and halfsize(w/2)) to do the comparsion
+"""
 function fitsinbox(pos, radius, center, halfsize)
 
 	for i in 1:length(pos)
 		(pos[i] - radius < center[i] - halfsize) && return false
 		(pos[i] + radius > center[i] + halfsize) && return false
 	end
-
+# the code judege by comapring with the box lower left point and uper right point
 	return true
+end
+"""
+  itsinbox(Opj_c, Obj_rad, box_c, box_hf, ratio) -> true/fasle
+
+  Finds out if the object with center position (Opj_c) and (Obj_rad) fits inside the box.
+  It uses the box dimension (box_c, and box_hf(w/2)) to do the comparsion
+  ratio is relative to box half width, so if you want to be just within the box
+  then ratio =1, if the boundaries of the object is slightly bigger and you still
+  want to include them make ratio bigger ex:1.2
+"""
+function fitsinbox(Opj_c, Obj_rad, box_c, box_hf, ratio)
+  for i in 1:length(Opj_c)
+		(Opj_c[i] - Obj_rad < box_c[i] - (box_hf*ratio)) && return false
+		(Opj_c[i] + Obj_rad > box_c[i] + (box_hf*ratio)) && return false
+	end
+# the code judege by comapring with the box lower left point and uper right point
+	return true
+
 end
 
 
@@ -189,36 +217,46 @@ function insert!{P,T}(tree, box, center::P, halfsize::T, point::P, radius::T, id
     # if saturated and not internal : create children and redistribute
     # if saturated and internal and not fat: insert!(childbox,...)
     # if saturated and internal and fat: insert here
+    # also if not saturated but there are non empty internal boxes try to insert there not here
 
     # or shorter:
 
     # sat & not internal: create children and redistibute
     # sat & internal & not fat: insert in childbox
     # all other cases: insert here
-
+    # Will find out first if we are solveing octree or quadtree 3D/2D
     dim = length(P)
     nch = 2^dim
 
     saturated = (length(box.data) + 1) > tree.splitcount
-    fat       = !fitsinbox(point, radius, center, halfsize)
+    fat       = !fitsinbox(point, radius, center, halfsize) # will update this once we approve the sorting in insert
+    #fat       = !fitsinbox(point, radius, center, halfsize,1.2)# will include fat objects within 1.2halfsize of the box
     internal  = !isleaf(box)
 
-    if !saturated || (saturated && internal && fat)
-
+    if (!internal && !saturated) || (saturated && internal && fat)
+        # this will only insert in top level in two cases
+        # 1) the object is fat anyway
+        # 2) there is no child boxes and still there is a place in this box ( it is not saturated)
         push!(box.data, id)
 
-    elseif saturated && internal && !fat
-
+    elseif internal && !fat
+        # now if the box has a space or not but it has a childern try to insert in the child not here
         sct = childsector(point, center)
         chdbox = box.children[sct+1]
         chdcenter, chdhalfsize = childcentersize(center, halfsize, sct)
-        insert!(tree, chdbox, chdcenter, chdhalfsize, point, radius, id)
+        if fitsinbox(point, radius, chdcenter, chdhalfsize)
+          insert!(tree, chdbox, chdcenter, chdhalfsize, point, radius, id)
+        else
+          push!(box.data, id)
+        end
+
+
 
     else # saturated && not internal
 
         # if their was a previous attempt to subdivide this box,
 
-        # insert the new element in this box for now
+        # insert the new element in this box for now as we will sort them after we create childrens
         push!(box.data, id)
 
         # if we are not allowed to subdivide any further stop. This will
@@ -251,7 +289,7 @@ function insert!{P,T}(tree, box, center::P, halfsize::T, point::P, radius::T, id
             sct = childsector(point, center)
             chdbox = box.children[sct+1]
             chdcenter, chdhalfsize = childcentersize(center, halfsize, sct)
-            if fitsinbox(point, radius, chdcenter, chdhalfsize)
+            if fitsinbox(point, radius, chdcenter, chdhalfsize)# I am changing this at the moment to the new version
                 push!(chdbox.data, id)
             else
                 push!(unmovables, id)
@@ -431,7 +469,7 @@ done(bi::BoxIterator, state) = isempty(state)
 import Base.find
 function find(tr::Octree, v; tol = sqrt(eps(eltype(v))))
 
-    pred = (c,s) -> fitsinbox(v, 0.0, c, s)
+    pred = (c,s) -> fitsinbox(v, 0.0, c, s)# i didn't change it because find will get the point anyway, it only chck for its existance
     I = Int[]
     for b in boxes(tr, pred)
       for i in b.data
