@@ -281,7 +281,6 @@ function insert!{P,T}(tree, box, center::P, halfsize::T, point::P, radius::T, id
             radius = tree.radii[id]
 
             sct = childsector(point, center)
-            #@show sct , point, center
             chdbox = box.children[sct+1]
             chdcenter, chdhalfsize = childcentersize(center, halfsize, sct)
             if fitsinbox(point, radius, chdcenter, chdhalfsize)# I am changing this at the moment to the new version
