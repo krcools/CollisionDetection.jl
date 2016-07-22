@@ -19,6 +19,7 @@ type Octree{T,P}
 
     points::Vector{P}
     radii::Vector{T}
+    #expanding_ratio::Float64 # This will add the expanding ratio of boxes in case we needed it will work on it later
 
     splitcount::Int
     minhalfsize::T
@@ -216,6 +217,7 @@ function insert!{P,T}(tree, box, center::P, halfsize::T, point::P, radius::T, id
     # if saturated and not internal : create children and redistribute
     # if saturated and internal and not fat: insert!(childbox,...)
     # if saturated and internal and fat: insert here
+    # also if not saturated but there are non empty internal boxes try to insert there not here
 
     # or shorter:
 
@@ -227,16 +229,18 @@ function insert!{P,T}(tree, box, center::P, halfsize::T, point::P, radius::T, id
     nch = 2^dim
 
     saturated = (length(box.data) + 1) > tree.splitcount
-    #fat       = !fitsinbox(point, radius, center, halfsize) # the old one will leave it here incase needed to go back
-    fat       = !fitsinbox(point, radius, center, halfsize,1.2)# will include fat objects within 1.2halfsize of the box
+    fat       = !fitsinbox(point, radius, center, halfsize) # will update this once we approve the sorting in insert
+    #fat       = !fitsinbox(point, radius, center, halfsize,1.2)# will include fat objects within 1.2halfsize of the box
     internal  = !isleaf(box)
 
-    if !saturated || (saturated && internal && fat)
-
+    if (!internal && !saturated) || (saturated && internal && fat)
+        # this will only insert in top level in two cases
+        # 1) the object is fat anyway
+        # 2) there is no child boxes and still there is a place in this box ( it is not saturated)
         push!(box.data, id)
 
-    elseif saturated && internal && !fat
-
+    elseif !saturated && internal && !fat
+        # now if the box has a space to insert but it has a childern try to insert in the child not here
         sct = childsector(point, center)
         chdbox = box.children[sct+1]
         chdcenter, chdhalfsize = childcentersize(center, halfsize, sct)
@@ -246,7 +250,7 @@ function insert!{P,T}(tree, box, center::P, halfsize::T, point::P, radius::T, id
 
         # if their was a previous attempt to subdivide this box,
 
-        # insert the new element in this box for now
+        # insert the new element in this box for now as we will sort them after we create childrens
         push!(box.data, id)
 
         # if we are not allowed to subdivide any further stop. This will
@@ -277,9 +281,10 @@ function insert!{P,T}(tree, box, center::P, halfsize::T, point::P, radius::T, id
             radius = tree.radii[id]
 
             sct = childsector(point, center)
+            #@show sct , point, center
             chdbox = box.children[sct+1]
             chdcenter, chdhalfsize = childcentersize(center, halfsize, sct)
-            if fitsinbox(point, radius, chdcenter, chdhalfsize,1.2)# I am changing this at the moment to the new version
+            if fitsinbox(point, radius, chdcenter, chdhalfsize)# I am changing this at the moment to the new version
                 push!(chdbox.data, id)
             else
                 push!(unmovables, id)
