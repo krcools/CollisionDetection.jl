@@ -239,12 +239,18 @@ function insert!{P,T}(tree, box, center::P, halfsize::T, point::P, radius::T, id
         # 2) there is no child boxes and still there is a place in this box ( it is not saturated)
         push!(box.data, id)
 
-    elseif !saturated && internal && !fat
-        # now if the box has a space to insert but it has a childern try to insert in the child not here
+    elseif internal && !fat
+        # now if the box has a space or not but it has a childern try to insert in the child not here
         sct = childsector(point, center)
         chdbox = box.children[sct+1]
         chdcenter, chdhalfsize = childcentersize(center, halfsize, sct)
-        insert!(tree, chdbox, chdcenter, chdhalfsize, point, radius, id)
+        if fitsinbox(point, radius, chdcenter, chdhalfsize)
+          insert!(tree, chdbox, chdcenter, chdhalfsize, point, radius, id)
+        else
+          push!(box.data, id)
+        end
+
+
 
     else # saturated && not internal
 
