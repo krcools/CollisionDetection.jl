@@ -230,8 +230,7 @@ function insert!{P,T}(tree, box, center::P, halfsize::T, point::P, radius::T, id
     expanding_ratio=tree.expanding_ratio
 
     saturated = (length(box.data) + 1) > tree.splitcount
-    #fat       = !fitsinbox(point, radius, center, halfsize, expanding_ratio)
-    fat       = !fitsinbox(point, radius, center, halfsize,expanding_ratio)# will include fat objects within 1.2halfsize of the box
+    fat       = !fitsinbox(point, radius, center, halfsize,expanding_ratio) # we test if the point is within the box and the expanswion if there is any
     internal  = !isleaf(box)
 
     if (!internal && !saturated) || (saturated && internal && fat)
@@ -245,7 +244,7 @@ function insert!{P,T}(tree, box, center::P, halfsize::T, point::P, radius::T, id
         sct = childsector(point, center)
         chdbox = box.children[sct+1]
         chdcenter, chdhalfsize = childcentersize(center, halfsize, sct)
-        if fitsinbox(point, radius, chdcenter, chdhalfsize,expanding_ratio)
+        if fitsinbox(point, radius, chdcenter, chdhalfsize,expanding_ratio) # check if it is fat and please consider the expansion
           insert!(tree, chdbox, chdcenter, chdhalfsize, point, radius, id)
         else
           push!(box.data, id)
@@ -290,7 +289,7 @@ function insert!{P,T}(tree, box, center::P, halfsize::T, point::P, radius::T, id
             sct = childsector(point, center)
             chdbox = box.children[sct+1]
             chdcenter, chdhalfsize = childcentersize(center, halfsize, sct)
-            if fitsinbox(point, radius, chdcenter, chdhalfsize,expanding_ratio)# I am changing this at the moment to the new version
+            if fitsinbox(point, radius, chdcenter, chdhalfsize,expanding_ratio)# # check if it is fat for the child and please consider the expansion
                 push!(chdbox.data, id)
             else
                 push!(unmovables, id)
