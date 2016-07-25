@@ -19,7 +19,7 @@ type Octree{T,P}
 
     points::Vector{P}
     radii::Vector{T}
-    #expanding_ratio::Float64 # This will add the expanding ratio of boxes in case we needed it will work on it later
+    expanding_ratio::Float64 # This will add the expanding ratio of boxes
 
     splitcount::Int
     minhalfsize::T
@@ -68,7 +68,7 @@ function boxesoverlap(c1, hs1, c2, hs2)
     return true
 end
 
-function Octree{T}(points::Vector, radii::Vector{T}, splitcount = 10,  minhalfsize = zero(T))
+function Octree{T}(points::Vector, radii::Vector{T}, expanding_ratio=1.0, splitcount = 10,  minhalfsize = zero(T))
 
     n_points = length(points)
     n_dims = length(eltype(points))
@@ -91,7 +91,7 @@ function Octree{T}(points::Vector, radii::Vector{T}, splitcount = 10,  minhalfsi
 
     # Create an empty octree
     rootbox = Box()
-    tree = Octree(center, halfsize, rootbox, points, radii, splitcount, minhalfsize)
+    tree = Octree(center, halfsize, rootbox, points, radii, expanding_ratio, splitcount, minhalfsize)
 
     # populate
     for id in 1:n_points
@@ -227,10 +227,10 @@ function insert!{P,T}(tree, box, center::P, halfsize::T, point::P, radius::T, id
     # Will find out first if we are solveing octree or quadtree 3D/2D
     dim = length(P)
     nch = 2^dim
+    expanding_ratio=tree.expanding_ratio
 
     saturated = (length(box.data) + 1) > tree.splitcount
-    fat       = !fitsinbox(point, radius, center, halfsize) # will update this once we approve the sorting in insert
-    #fat       = !fitsinbox(point, radius, center, halfsize,1.2)# will include fat objects within 1.2halfsize of the box
+    fat       = !fitsinbox(point, radius, center, halfsize,expanding_ratio) # we test if the point is within the box and the expanswion if there is any
     internal  = !isleaf(box)
 
     if (!internal && !saturated) || (saturated && internal && fat)
@@ -244,7 +244,7 @@ function insert!{P,T}(tree, box, center::P, halfsize::T, point::P, radius::T, id
         sct = childsector(point, center)
         chdbox = box.children[sct+1]
         chdcenter, chdhalfsize = childcentersize(center, halfsize, sct)
-        if fitsinbox(point, radius, chdcenter, chdhalfsize)
+        if fitsinbox(point, radius, chdcenter, chdhalfsize,expanding_ratio) # check if it is fat and please consider the expansion
           insert!(tree, chdbox, chdcenter, chdhalfsize, point, radius, id)
         else
           push!(box.data, id)
@@ -289,7 +289,7 @@ function insert!{P,T}(tree, box, center::P, halfsize::T, point::P, radius::T, id
             sct = childsector(point, center)
             chdbox = box.children[sct+1]
             chdcenter, chdhalfsize = childcentersize(center, halfsize, sct)
-            if fitsinbox(point, radius, chdcenter, chdhalfsize)# I am changing this at the moment to the new version
+            if fitsinbox(point, radius, chdcenter, chdhalfsize,expanding_ratio)# # check if it is fat for the child and please consider the expansion
                 push!(chdbox.data, id)
             else
                 push!(unmovables, id)
