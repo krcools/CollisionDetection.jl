@@ -49,18 +49,20 @@ end
 """
 Predicate used for iteration over an Octree. Returns true if two boxes
 specified by their centers and halfsizes overlap. More carefull investigation
-of the objects within is required to assess collision.
+of the objects within is required to assess collision. False positives are possible.
 
     boxesoverlap(c1, hs1, c2, hs2)
 """
 function boxesoverlap(c1, hs1, c2, hs2)
+
+    tol = sqrt(eps(typeof(hs1)))
     # Checking the type of the problem domain 2D or 3D? and making sure the boxes are from same domain
     dim = length(c1)
     @assert dim == length(c2)
     #Note: I have fixed the condition, now it works for 3D and 2D
     hs = hs1 + hs2
     for i in 1 : dim
-        if abs(c1[i] - c2[i]) >= hs
+        if abs(c1[i] - c2[i]) > hs + tol
             return false
         end
     end
