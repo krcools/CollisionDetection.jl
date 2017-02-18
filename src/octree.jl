@@ -8,7 +8,7 @@ Box() = Box(Int[], Box[])
 
 """
 T: type of the coordinates
-P: type of the points stored in the Octree
+P: type of the points stored in the Octree.
 """
 type Octree{T,P}
     center::P
