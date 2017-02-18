@@ -22,7 +22,7 @@ tree = CD.Octree(data, radii)
 println("Testing allways true iterator")
 sz = 0
 for box in CD.boxes(tree)
-    sz += length(box.data)
+    sz += length(box)
 end
 @test sz == n
 
@@ -36,7 +36,7 @@ end
 println("Testing query for box in sector [7,0]")
 sz = 0
 for box in CD.boxes(tree, (c,s)->CD.fitsinbox([1,1,1]/8,0,c,s))
-    sz += length(box.data)
+    sz += length(box)
 end
 @show sz
 
@@ -50,7 +50,7 @@ tree = CD.Octree(data, radii)
 println("Testing allways true iterator [2D]")
 sz = 0
 for box in CD.boxes(tree)
-    sz += length(box.data)
+    sz += length(box)
 end
 @test sz == n
 
@@ -64,6 +64,6 @@ end
 println("Testing query for box in sector [7,0], [2D]")
 sz = 0
 for box in CD.boxes(tree, (c,s)->CD.fitsinbox([1,1]/8,0,c,s))
-    sz += length(box.data)
+    sz += length(box)
 end
 @show sz

@@ -1,5 +1,3 @@
-export Octree
-export boxes, fitsinbox, boudingbox, boxesoverlap
 
 type Box
     data::Vector{Int}
@@ -177,7 +175,7 @@ end
 
 
 
-export childcentersize
+
 
 """
   childcentersize(center, halfsize, sector) -> center, halfsize
@@ -409,7 +407,7 @@ end
 
 function next(bi::BoxIterator, state)
 
-    item = last(state).box
+    item = last(state).box.data
 
     box = last(state).box   # current box
     sct = last(state).sct   # next child to visit
@@ -469,12 +467,18 @@ end
 done(bi::BoxIterator, state) = isempty(state)
 
 import Base.find
+
+"""
+    find(octree, pos, tolerance=sqrt(eps(eltype(pos))))
+
+Return an array containing the indices of values at `pos` (up to a tolerance)
+"""
 function find(tr::Octree, v; tol = sqrt(eps(eltype(v))))
 
     pred = (c,s) -> fitsinbox(v, 0.0, c, s)# i didn't change it because find will get the point anyway, it only chck for its existance
     I = Int[]
     for b in boxes(tr, pred)
-      for i in b.data
+      for i in b
         if norm(tr.points[i] - v) < tol
           push!(I, i)
         end
