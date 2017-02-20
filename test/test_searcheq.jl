@@ -8,8 +8,12 @@ fn = normpath(joinpath(@__FILE__,"..","center_sizes.jld"))
 dn = normpath(joinpath(@__FILE__,".."))
 @show readdir(dn)
 d = load(fn)
-ctrs = d["ctrs"]
+
+#ctrs = d["ctrs"]
+tmp = d["ctrs"]
+ctrs = [SVector(q...) for q in tmp]
 rads = d["rads"]
+
 
 tree = Octree(ctrs, rads)
 

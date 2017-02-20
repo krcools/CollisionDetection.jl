@@ -6,13 +6,13 @@ CD = CollisionDetection
 @test CD.childsector([-1,1,-1,1],[0,0,0,0]) == 10
 @test CD.childsector([1,1],[0,0]) == 3
 
-@test CD.childcentersize(Vec(0.,0.,0.), 1., 3) == (Vec(0.5,0.5,-0.5), 0.5)
-@test CD.childcentersize(Vec(0.,0.,0.), 2., 7) == (Vec(1.0,1.0,1.0), 1.0)
+@test CD.childcentersize(SVector(0.,0.,0.), 1., 3) == (SVector(0.5,0.5,-0.5), 0.5)
+@test CD.childcentersize(SVector(0.,0.,0.), 2., 7) == (SVector(1.0,1.0,1.0), 1.0)
 
-@test CD.childcentersize(Vec(1.,1.,1.,1.), 2., 9) == (Vec(2.,0.,0.,2.), 1.)
+@test CD.childcentersize(SVector(1.,1.,1.,1.), 2., 9) == (SVector(2.,0.,0.,2.), 1.)
 
 d, n = 3, 200
-data = Point{d,Float64}[rand(Point{d,Float64}) for i in 1:n]
+data = SVector{d,Float64}[rand(SVector{d,Float64}) for i in 1:n]
 radii = abs.(rand(n))
 tree = CD.Octree(data, radii)
 
@@ -40,7 +40,7 @@ end
 @show sz
 
 T = Float64
-P = Vec{2,T}
+P = SVector{2,T}
 n = 40000
 data = P[rand(P) for i in 1:n]
 radii = abs(rand(T,n))
