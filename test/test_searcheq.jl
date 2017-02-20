@@ -3,7 +3,10 @@ using FixedSizeArrays
 using JLD
 using Base.Test
 
-fn = joinpath(@__FILE__,"..","center_sizes.jld")
+fn = normpath(joinpath(@__FILE__,"..","center_sizes.jld"))
+@show fn
+dn = normpath(joinpath(@__FILE__,".."))
+@show readdir(dn)
 d = load(fn)
 ctrs = d["ctrs"]
 rads = d["rads"]
