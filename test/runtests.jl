@@ -1,7 +1,7 @@
 module MyPkgTests
 
 using Base.Test
-
+using FixedSizeArrays
 import CollisionDetection
 
 include("test_core.jl")

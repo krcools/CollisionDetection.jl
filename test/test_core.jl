@@ -1,4 +1,3 @@
-using FixedSizeArrays
 CD = CollisionDetection
 
 @test CD.childsector([1,1,1],[0,0,0]) == 7
@@ -7,14 +6,14 @@ CD = CollisionDetection
 @test CD.childsector([-1,1,-1,1],[0,0,0,0]) == 10
 @test CD.childsector([1,1],[0,0]) == 3
 
-@test CD.childcentersize(Point(0.,0.,0.), 1., 3) == (Point(0.5,0.5,-0.5), 0.5)
-@test CD.childcentersize(Point(0.,0.,0.), 2., 7) == (Point(1.0,1.0,1.0), 1.0)
+@test CD.childcentersize(Vec(0.,0.,0.), 1., 3) == (Vec(0.5,0.5,-0.5), 0.5)
+@test CD.childcentersize(Vec(0.,0.,0.), 2., 7) == (Vec(1.0,1.0,1.0), 1.0)
 
 @test CD.childcentersize(Vec(1.,1.,1.,1.), 2., 9) == (Vec(2.,0.,0.,2.), 1.)
 
 d, n = 3, 200
 data = Point{d,Float64}[rand(Point{d,Float64}) for i in 1:n]
-radii = abs(rand(n))
+radii = abs.(rand(n))
 tree = CD.Octree(data, radii)
 
 @test length(tree) == n
