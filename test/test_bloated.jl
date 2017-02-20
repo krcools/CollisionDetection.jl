@@ -11,7 +11,7 @@ data = SVector{d,Float64}[2*rand(SVector{d,Float64}) for i in 1:n]  # create the
 push!(data,SVector(2.0,2.0))        # The is the the top right corner
 push!(data,SVector(0.0,0.0))        # This is the lower left corner
 push!(data, SVector(0.90,0.5))      # This point is at the edgre of sector(0) (-,-)
-radii = abs(zeros(n+2))           # We set raduis for all points to zero to test if they fill in sectors as well
+radii = abs.(zeros(n+2))           # We set raduis for all points to zero to test if they fill in sectors as well
 push!(radii,0.2)                  # Now only the test point has a raduis
 tree = CD.Octree(data, radii)     # Create an Octree with normal (ratio=1) so that means the point is unmovable to child sector
 @test tree.rootbox.data[1]==n+3   # Now we test if the test point is the only unmovable (it should be)

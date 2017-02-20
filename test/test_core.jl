@@ -43,7 +43,7 @@ T = Float64
 P = SVector{2,T}
 n = 40000
 data = P[rand(P) for i in 1:n]
-radii = abs(rand(T,n))
+radii = abs.(rand(T,n))
 tree = CD.Octree(data, radii)
 
 println("Testing allways true iterator [2D]")

@@ -76,8 +76,20 @@ function Octree{T}(points::Vector, radii::Vector{T}, expanding_ratio=1.0, splitc
     # compute the bounding box taking into account
     # the radius of the objects to be inserted
     radius =  maximum(radii)
-    ll = minimum(points) - radius
-    ur = maximum(points) + radius
+	
+	@assert !isempty(points)
+	ll = points[1]
+	ur = points[1]
+	for i in 2:length(points)
+		ll = min.(ll, points[i])
+		ur = max.(ur, points[i])
+	end
+	
+	ll = ll .- radius
+	ur = ur .+ radius
+	
+    #ll = minimum(points) - radius
+    #ur = maximum(points) + radius
 
     center = (ll + ur) / 2
     halfsize = maximum(ur - center)
@@ -267,7 +279,7 @@ function insert!{P,T}(tree, box, center::P, halfsize::T, point::P, radius::T, id
         end
 
         # Create an array of childboxes
-        box.children = Array(Box,nch)
+        box.children = Array{Box}(nch)
         for i in 1:nch
             box.children[i] = Box(Int[], Box[])
         end

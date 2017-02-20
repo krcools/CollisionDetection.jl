@@ -9,5 +9,5 @@ function searchtree(pred, tree::Octree, bb)
     ct, st = bb
     box_pred = (c,s) ->  boxesoverlap(c, s, ct, st)
     box_it = boxes(tree, box_pred)
-    filter(pred, Base.flatten(box_it))
+    Compat.Iterators.filter(pred, Compat.Iterators.flatten(box_it))
 end
