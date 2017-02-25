@@ -13,4 +13,4 @@ notifications:
 #  - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
 #  - julia -e 'Pkg.clone(pwd()); Pkg.build("CollisionDetection"); Pkg.test("CollisionDetection"; coverage=true)'
 after_success:
-  - julia -e 'cd(Pkg.dir("WiltonInts84")); Pkg.add("Coverage"); using Coverage; Codecov.submit(process_folder())'
+  - julia -e 'cd(Pkg.dir("CollisionDetection")); Pkg.add("Coverage"); using Coverage; Codecov.submit(process_folder())'
