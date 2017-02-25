@@ -1,24 +1,21 @@
 using CollisionDetection
-using FixedSizeArrays
+using StaticArrays
 using JLD
 using Base.Test
 
 fn = normpath(joinpath(@__FILE__,"..","center_sizes.jld"))
 d = load(fn)
 
-#ctrs = d["ctrs"]
 tmp = d["ctrs"]
 ctrs = [SVector(q...) for q in tmp]
 rads = d["rads"]
-
 
 tree = Octree(ctrs, rads)
 
 # extract all the triangles that (potentially) intersect octant (+,+,+)
 pred(i) = all(ctrs[i].+rads[i] .> 0)
-bb = Vec(0.5, 0.5, 0.5), 0.5
+bb = SVector(0.5, 0.5, 0.5), 0.5
 ids = collect(searchtree(pred, tree, bb))
-
 @test length(ids) == 154
 
 # using MATLAB
