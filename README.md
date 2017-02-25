@@ -2,7 +2,8 @@
 
 A package for the log(N) retrieval of colliding objects
 
-[![Build Status](https://travis-ci.org/krcools/CollisionDetection.svg?branch=master)](https://travis-ci.org/krcools/CollisionDetection)
+[![Build Status](https://travis-ci.org/krcools/CollisionDetection.svg?branch=master)](https://travis-ci.org/krcools/CollisionDetection) [![codecov](https://codecov.io/gh/krcools/WiltonInts84.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/krcools/WiltonInts84.jl)
+
 
 Contains an nd-tree data structure for the storage of objects of finite extent (i.e. not just points). Objects
 inserted in the tree will only descend as long as they fit the box they are assigned too. The main purpose of
