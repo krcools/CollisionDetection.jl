@@ -1,4 +1,2 @@
-julia 0.5
-Compat 0.18
 StaticArrays 0.3.0
-JLD 0.6.9
+JLD 0.5.9
