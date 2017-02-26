@@ -3,7 +3,7 @@ using StaticArrays
 using JLD
 using Base.Test
 
-fn = normpath(joinpath(@__FILE__,"..","center_sizes.jld"))
+fn = normpath(joinpath(dirname(@__FILE__),"center_sizes.jld"))
 d = load(fn)
 
 tmp = d["ctrs"]
