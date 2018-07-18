@@ -1,5 +1,5 @@
 
-type Box
+mutable struct Box
     data::Vector{Int}
     children::Vector{Box}
 end
@@ -10,7 +10,7 @@ Box() = Box(Int[], Box[])
 T: type of the coordinates
 P: type of the points stored in the Octree.
 """
-type Octree{T,P}
+mutable struct Octree{T,P}
     center::P
     halfsize::T
     rootbox::Box
@@ -29,7 +29,7 @@ end
 Compute the bounding cube/square for a Array of Point. The return values
 are the center of the bounding box and the half size of the cube.
 """
-function boundingbox{P}(v::Vector{P})
+function boundingbox(v::Vector{P}) where {P}
   #P are points values (x,y) in 2D or (x,y,z) in 3D
   ll = minimum(v)
   ur = maximum(v)
@@ -68,7 +68,7 @@ function boxesoverlap(c1, hs1, c2, hs2)
     return true
 end
 
-function Octree{T}(points::Vector, radii::Vector{T}, expanding_ratio=1.0, splitcount = 10,  minhalfsize = zero(T))
+function Octree(points::Vector, radii::Vector{T}, expanding_ratio=1.0, splitcount = 10,  minhalfsize = zero(T)) where {T}
 
     n_points = length(points)
     n_dims = length(eltype(points))
@@ -76,7 +76,7 @@ function Octree{T}(points::Vector, radii::Vector{T}, expanding_ratio=1.0, splitc
     # compute the bounding box taking into account
     # the radius of the objects to be inserted
     radius =  maximum(radii)
-	
+
 	@assert !isempty(points)
 	ll = points[1]
 	ur = points[1]
@@ -84,10 +84,10 @@ function Octree{T}(points::Vector, radii::Vector{T}, expanding_ratio=1.0, splitc
 		ll = min.(ll, points[i])
 		ur = max.(ur, points[i])
 	end
-	
+
 	ll = ll .- radius
 	ur = ur .+ radius
-	
+
     #ll = minimum(points) - radius
     #ur = maximum(points) + radius
 
@@ -122,7 +122,6 @@ end
 
 Insert zero radius objects at positions `points` in an Octree
 """
-
 Octree(points) = Octree(points, zeros(eltype(eltype(points)), length(points)))
 
 
@@ -223,7 +222,7 @@ point:    the point at which to insert
 radius:   the radius of the item to insert
 id:       a unique id that identifies the inserted item uniquely
 """
-function insert!{P,T}(tree, box, center::P, halfsize::T, point::P, radius::T, id)
+function insert!(tree, box, center::P, halfsize::T, point::P, radius::T, id) where {T,P}
 
     # if not saturated: insert here
     # if saturated and not internal : create children and redistribute
@@ -279,7 +278,7 @@ function insert!{P,T}(tree, box, center::P, halfsize::T, point::P, radius::T, id
         end
 
         # Create an array of childboxes
-        box.children = Array{Box}(nch)
+        box.children = Array{Box}(undef,nch)
         for i in 1:nch
             box.children[i] = Box(Int[], Box[])
         end
@@ -381,12 +380,12 @@ function length(tree::Octree)
 end
 
 
-type BoxIterator{T,P,F}
+mutable struct BoxIterator{T,P,F}
     predicate::F
     tree::Octree{T,P}
 end
 
-type BoxIteratorStage{T,P}
+mutable struct BoxIteratorStage{T,P}
     box::Box
     sct::Int
     center::P

@@ -1,7 +1,7 @@
-using CollisionDetection
-using StaticArrays
-using Base.Test
-using JLD
+#using Test
+#using StaticArrays
+#using CollisionDetection
+#using JLD2
 CD = CollisionDetection
 
 @test CD.childsector([1,1,1],[0,0,0]) == 7
@@ -25,21 +25,21 @@ tree = CD.Octree(data, radii)
 println("Testing allways true iterator")
 sz = 0
 for box in CD.boxes(tree)
-    sz += length(box)
+    global sz += length(box)
 end
 @test sz == n
 
 println("Testing allways false iterator")
 sz = 0
 for box in CD.boxes(tree, (c,s)->false)
-    sz += length(box.data)
+    global sz += length(box.data)
 end
 @test sz == 0
 
 println("Testing query for box in sector [7,0]")
 sz = 0
 for box in CD.boxes(tree, (c,s)->CD.fitsinbox([1,1,1]/8,0,c,s))
-    sz += length(box)
+    global sz += length(box)
 end
 @show sz
 
@@ -53,46 +53,52 @@ tree = CD.Octree(data, radii)
 println("Testing allways true iterator [2D]")
 sz = 0
 for box in CD.boxes(tree)
-    sz += length(box)
+    global sz += length(box)
 end
 @test sz == n
 
 println("Testing allways false iterator [2D]")
 sz = 0
 for box in CD.boxes(tree, (c,s)->false)
-    sz += length(box.data)
+    global sz += length(box.data)
 end
 @test sz == 0
 
 println("Testing query for box in sector [7,0], [2D]")
 sz = 0
 for box in CD.boxes(tree, (c,s)->CD.fitsinbox([1,1]/8,0,c,s))
-    sz += length(box)
+    global sz += length(box)
 end
 @show sz
 
 
 ## Test the case of degenerate bounding boxes
-fn = joinpath(dirname(@__FILE__),"assets","front.jld")
-V,F = jldopen(fn,"r") do file
-        read(file, "V"), read(file, "F")
+fn = joinpath(dirname(@__FILE__),"assets","back.jld2")
+jldopen(fn,"r") do file
+        global U = file["V"]
+        global G = file["F"]
+        #read(file, "V"), read(file, "F")
 end
 
-fn = joinpath(dirname(@__FILE__),"assets","back.jld")
-U,G = jldopen(fn,"r") do file
-        read(file, "V"), read(file, "F")
+fn = joinpath(dirname(@__FILE__),"assets","front.jld2")
+jldopen(fn,"r") do file
+        global V = file["V"]
+        global F = file["F"]
+        #read(file, "V"), read(file, "F")
 end
+
+@assert eltype(V) <: SVector
 
 radii = zeros(length(V))
-tree = Octree(V, radii)
+tree = CD.Octree(V, radii)
 
 tree_ctr, tree_hs = tree.center, tree.halfsize
 
 u = U[3]
 atol = sqrt(eps())
 @test norm(u-V[4]) < atol
-pred(c,s) = fitsinbox(Array(u), 0.0, c, s+atol)
+pred(c,s) = CD.fitsinbox(Array(u), 0.0, c, s+atol)
 @test pred(tree_ctr, tree_hs)
-it = boxes(tree, pred)
+it = CD.boxes(tree, pred)
 st = start(it)
 @test !done(it, st)
