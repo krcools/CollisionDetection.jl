@@ -1,6 +1,7 @@
 module CollisionDetection
 
 using Compat
+using LinearAlgebra
 
 export Octree
 export boxes, fitsinbox, boudingbox, boxesoverlap
