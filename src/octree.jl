@@ -385,6 +385,8 @@ mutable struct BoxIterator{T,P,F}
     tree::Octree{T,P}
 end
 
+Base.IteratorSize(::BoxIterator) = Base.SizeUnknown()
+
 mutable struct BoxIteratorStage{T,P}
     box::Box
     sct::Int
@@ -394,34 +396,17 @@ end
 
 boxes(tree::Octree, pred = (ctr,hsz)->true) = BoxIterator(pred, tree)
 
-import Base: start, next, done
-function start(bi::BoxIterator)
+"""
+    advance(it, state)
 
-    pred     = bi.predicate
-    center   = bi.tree.center
-    halfsize = bi.tree.halfsize
+Moves `state` ahead to point at either the next valid position or one-off-end.
+"""
+function advance(bi::BoxIterator, state)
 
-    state = [ BoxIteratorStage(
-        bi.tree.rootbox, 0, center, halfsize
-    ) ]
+    pred = bi.predicate
 
-    # If the rootbox does not satisfy the predicate,
-    # fast forward to the next eligible box
-    # take care of this deeply annoying corner case:
-    if !pred(center, halfsize)
-        box, state = next(bi, state)
-    end
-
-    return state
-
-end
-
-function next(bi::BoxIterator, state)
-
-    item = last(state).box.data
-
-    box = last(state).box   # current box
-    sct = last(state).sct   # next child to visit
+    box = last(state).box
+    sct = last(state).sct
     hsz = last(state).halfsize
     ctr = last(state).center
 
@@ -469,13 +454,33 @@ function next(bi::BoxIterator, state)
         if sct == 0 && !isempty(box.data)
             break
         end
-
     end
 
-    return item, state
+    return state
 end
 
-done(bi::BoxIterator, state) = isempty(state)
+function Base.iterate(bi::BoxIterator)
+
+    state = [ BoxIteratorStage(
+        bi.tree.rootbox, 0, bi.tree.center, bi.tree.halfsize
+    ) ]
+
+    if !bi.predicate( bi.tree.center, bi.tree.halfsize)
+        state = advance(bi, state)
+    end
+
+    # at this point state will be either empty or valid
+    @assert isempty(state) || bi.predicate(last(state).center, last(state).halfsize)
+
+    iterate(bi, state)
+end
+
+function Base.iterate(bi::BoxIterator, state)
+
+    isempty(state) && return nothing
+
+    return last(state).box.data, advance(bi, state)
+end
 
 import Base.find
 
