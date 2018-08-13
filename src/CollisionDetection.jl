@@ -5,7 +5,7 @@ using LinearAlgebra
 
 export Octree
 export boxes, fitsinbox, boudingbox, boxesoverlap
-export searchtree
+export searchtree, find
 
 
 include("octree.jl")

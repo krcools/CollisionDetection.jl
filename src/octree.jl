@@ -482,8 +482,6 @@ function Base.iterate(bi::BoxIterator, state)
     return last(state).box.data, advance(bi, state)
 end
 
-import Base.find
-
 """
     find(octree, pos, tolerance=sqrt(eps(eltype(pos))))
 
