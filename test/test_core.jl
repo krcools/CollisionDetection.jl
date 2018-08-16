@@ -1,7 +1,3 @@
-#using Test
-#using StaticArrays
-#using CollisionDetection
-#using JLD2
 CD = CollisionDetection
 
 @test CD.childsector([1,1,1],[0,0,0]) == 7

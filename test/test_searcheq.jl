@@ -1,8 +1,3 @@
-#using CollisionDetection
-#using StaticArrays
-#using JLD2
-#using Test
-
 fn = normpath(joinpath(dirname(@__FILE__),"center_sizes.jld2"))
 d = JLD2.jldopen(fn,"r")
 
