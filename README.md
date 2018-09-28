@@ -14,20 +14,23 @@ Usage
 
 ```julia
 using CollisionDetection
-using FixedSizeArrays
+using StaticArrays
 
 n = 100
-p = [Vec(rand(),rand(),rand()) for i in 1:n]
-r = [0.1*rand() for i in 1:n]
+centers = 2 .* [rand(SVector{3,Float64}) for i in 1:n] .- 1
+radii = [0.1*rand() for i in 1:n]
 
-tree = Octree(p,r)
+tree = Octree(centers, radii)
 ```
 
 To detect colliding objects in a tree, both a bounding box and a collision predicate are required. The bounding box is given by a centre and half the size of the side of the box. The predicate takes an index and returns true or false depending on whether the i-th object stored in the tree collides with the target.
 
 ```julia
-pred(i) = all(ctrs[i].+rads[i] .> 0)
-bb = SVector(0.5, 0.5, 0.5), 0.5
+# Given an index, is the corresponding ball eligible?
+pred(i) = all(centers[i].+radii[i] .> 0)
+# Bounding box in the (center,halfside) format supplied for effiency
+bb = @SVector[0.5, 0.5, 0.5], 0.5
+# collect the iterator of admissible indices
 ids = collect(searchtree(pred, tree, bb))
 ```
 
