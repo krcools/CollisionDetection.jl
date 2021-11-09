@@ -244,7 +244,7 @@ function insert!(tree, box, center::P, halfsize::T, point::P, radius::T, id) whe
     fat       = !fitsinbox(point, radius, center, halfsize,expanding_ratio) # we test if the point is within the box and the expanswion if there is any
     internal  = !isleaf(box)
 
-    if (!internal && !saturated) || (saturated && internal && fat)
+    if (!internal && !saturated) || (internal && fat)
         # this will only insert in top level in two cases
         # 1) the object is fat anyway
         # 2) there is no child boxes and still there is a place in this box ( it is not saturated)
