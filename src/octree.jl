@@ -489,7 +489,7 @@ Return an array containing the indices of values at `pos` (up to a tolerance)
 """
 function find(tr::Octree, v; tol = sqrt(eps(eltype(v))))
 
-    pred = (c,s) -> fitsinbox(v, 0.0, c, s)# i didn't change it because find will get the point anyway, it only chck for its existance
+    pred = (c,s) -> fitsinbox(v, 0.0, c, s+tol)# i didn't change it because find will get the point anyway, it only chck for its existance
     I = Int[]
     for b in boxes(tr, pred)
       for i in b
