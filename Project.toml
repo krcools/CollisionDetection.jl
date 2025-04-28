@@ -1,6 +1,6 @@
 name = "CollisionDetection"
 uuid = "2b5bf9a6-f3f8-5352-af9c-82bb4af718d8"
-version = "0.1.6"
+version = "0.1.7"
 
 [deps]
 Compat = "34da2185-b29b-5c13-b0c7-acf172513d20"
