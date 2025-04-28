@@ -395,6 +395,10 @@ mutable struct BoxIteratorStage{T,P}
 end
 
 boxes(tree::Octree, pred = (ctr,hsz)->true) = BoxIterator(pred, tree)
+function boxes(tree::Octree, center, halfsize)
+    pred = (c,s) -> boxesoverlap(c, s * tree.expanding_ratio, center, halfsize)
+    BoxIterator(pred, tree)
+end
 
 """
     advance(it, state)
