@@ -98,7 +98,7 @@ function Octree(points::Vector, radii::Vector{T}, expanding_ratio=1.0, splitcoun
     # make a reasonable guess
     if minhalfsize == 0
         #TODO generalise
-        minhalfsize = 0.1 * halfsize * (splitcount / n_points)^(1/3)
+        minhalfsize = T( 0.1 * halfsize * (splitcount / n_points)^(1/3))
     end
 
     # Create an empty octree
