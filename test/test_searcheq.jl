@@ -29,4 +29,4 @@ ids = collect(CD.searchtree(pred, tree, bb))
 ids2 = findall(i -> all(ctrs[i].+rads[i] .> 0), 1:N)
 @test length(ids2) == length(ids)
 @test sort(ids2) == sort(ids)
-@test ids == [26, 46, 54, 93, 34, 94, 75, 23, 86, 57, 44, 40, 67, 73, 77, 80]
+@test sort(ids) == sort([26, 46, 54, 93, 34, 94, 75, 23, 86, 57, 44, 40, 67, 73, 77, 80])

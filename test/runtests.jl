@@ -11,5 +11,6 @@ import CollisionDetection
 include("test_core.jl")
 include("test_bloated.jl")
 include("test_searcheq.jl")
+include("test_regressions.jl")
 
 end # module
