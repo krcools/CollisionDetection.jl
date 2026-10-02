@@ -1,4 +1,3 @@
-    
 mutable struct Box
     data::Vector{Int}
     children::Vector{Box}
@@ -17,6 +16,8 @@ mutable struct Octree{T,P}
 
     points::Vector{P}
     radii::Vector{T}
+    lowers::Vector{P} # Read-only cached lower bounds of each object's bounding box.
+    uppers::Vector{P} # Read-only cached upper bounds of each object's bounding box.
     expanding_ratio::Float64 # This will add the expanding ratio of boxes
 
     splitcount::Int
@@ -68,8 +69,15 @@ function boxesoverlap(c1, hs1, c2, hs2)
     return true
 end
 
-function Octree(points::Vector, radii::Vector{T}, expanding_ratio=1.0, splitcount = 10,  minhalfsize = zero(T)) where {T}
+"""
+    Octree(points, radii, expanding_ratio=1.0, splitcount=10, minhalfsize=0)
 
+Build an octree for object centers and radii. The default expansion ratio is
+one. Callers using the raw `boxes(tree, predicate)` iterator must account for
+`tree.expanding_ratio` in their predicate when constructing a tree with a
+larger ratio; the iterator itself does not expand predicate arguments.
+"""
+function Octree(points::Vector, radii::Vector{T}, expanding_ratio=1.0, splitcount = 10,  minhalfsize = zero(T)) where {T}
     n_points = length(points)
     n_dims = length(eltype(points))
 
@@ -88,9 +96,6 @@ function Octree(points::Vector, radii::Vector{T}, expanding_ratio=1.0, splitcoun
 	ll = ll .- radius
 	ur = ur .+ radius
 
-    #ll = minimum(points) - radius
-    #ur = maximum(points) + radius
-
     center = (ll + ur) / 2
     halfsize = maximum(ur - center)
 
@@ -98,12 +103,26 @@ function Octree(points::Vector, radii::Vector{T}, expanding_ratio=1.0, splitcoun
     # make a reasonable guess
     if minhalfsize == 0
         #TODO generalise
-        minhalfsize = T( 0.1 * halfsize * (splitcount / n_points)^(1/3))
+        minhalfsize = T(0.1 * halfsize * (splitcount / n_points)^(1 / n_dims))
     end
+
+    lowers = [point .- radius for (point, radius) in zip(points, radii)]
+    uppers = [point .+ radius for (point, radius) in zip(points, radii)]
 
     # Create an empty octree
     rootbox = Box()
-    tree = Octree(center, halfsize, rootbox, points, radii, expanding_ratio, splitcount, minhalfsize)
+    tree = Octree(
+        center,
+        halfsize,
+        rootbox,
+        points,
+        radii,
+        lowers,
+        uppers,
+        expanding_ratio,
+        splitcount,
+        minhalfsize,
+    )
 
     # populate
     for id in 1:n_points
@@ -164,6 +183,21 @@ function fitsinbox(pos, radius, center, halfsize)
 	end
 # the code judege by comapring with the box lower left point and uper right point
 	return true
+end
+
+"""
+    fitsboundsinbox(lower, upper, center, halfsize, ratio) -> Bool
+
+Return `true` when the axis-aligned bounds `lower` and `upper` fit inside
+the box described by `center` and `halfsize`, after expanding the box by
+the multiplicative factor `ratio`.
+"""
+function fitsboundsinbox(lower, upper, center, halfsize, ratio)
+    for i in eachindex(center)
+        lower[i] < center[i] - halfsize * ratio && return false
+        upper[i] > center[i] + halfsize * ratio && return false
+    end
+    return true
 end
 """
   itsinbox(Opj_c, Obj_rad, box_c, box_hf, ratio) -> true/fasle
@@ -255,7 +289,9 @@ function insert!(tree, box, center::P, halfsize::T, point::P, radius::T, id) whe
         sct = childsector(point, center)
         chdbox = box.children[sct+1]
         chdcenter, chdhalfsize = childcentersize(center, halfsize, sct)
-        if fitsinbox(point, radius, chdcenter, chdhalfsize,expanding_ratio) # check if it is fat and please consider the expansion
+        if fitsboundsinbox(
+            tree.lowers[id], tree.uppers[id], chdcenter, chdhalfsize,expanding_ratio
+        )
           insert!(tree, chdbox, chdcenter, chdhalfsize, point, radius, id)
         else
           push!(box.data, id)
@@ -300,7 +336,9 @@ function insert!(tree, box, center::P, halfsize::T, point::P, radius::T, id) whe
             sct = childsector(point, center)
             chdbox = box.children[sct+1]
             chdcenter, chdhalfsize = childcentersize(center, halfsize, sct)
-            if fitsinbox(point, radius, chdcenter, chdhalfsize,expanding_ratio)# # check if it is fat for the child and please consider the expansion
+            if fitsboundsinbox(
+                tree.lowers[id], tree.uppers[id], chdcenter, chdhalfsize, expanding_ratio
+            )
                 push!(chdbox.data, id)
             else
                 push!(unmovables, id)
@@ -394,6 +432,13 @@ mutable struct BoxIteratorStage{T,P}
     halfsize::T
 end
 
+"""
+    boxes(tree, predicate)
+
+Iterate over boxes accepted by `predicate`. Raw predicates receive the nominal
+box center and halfsize, so they must account for `tree.expanding_ratio`
+themselves when a tree was built with an expansion ratio larger than one.
+"""
 boxes(tree::Octree, pred = (ctr,hsz)->true) = BoxIterator(pred, tree)
 function boxes(tree::Octree, center, halfsize)
     pred = (c,s) -> boxesoverlap(c, s * tree.expanding_ratio, center, halfsize)
